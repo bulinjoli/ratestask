@@ -29,16 +29,16 @@ class RatesClass(Resource):
     @app.doc(
         responses={200: "OK", 400: "Invalid Argument", 500: "Mapping Key Error"},
         params={
-            "date_from": "Enter date from in format yyyy-mm-dd",
-            "date_to": "Enter date in format yyyy-mm-dd",
-            "origin": "Enter origin where from to go",
-            "destination": "Enter destination where to go",
+            "date_from": "Enter date from in format yyyy-mm-dd; example: 2016-01-01",
+            "date_to": "Enter date in format yyyy-mm-dd; example: 2016-01-10",
+            "origin": "Enter origin code or slug from where to go; example: CNGGZ or china_south_main",
+            "destination": "Enter destination code or slug where to go; example: EETLL or baltic_main",
         },
     )
     @app.expect(Parser.rates_get)
     def get(self):
 
-        args = Parser.rates_get_get.parse_args()
+        args = Parser.rates_get.parse_args()
         date_from = args.get("date_from")
         date_to = args.get("date_to")
         origin = args.get("origin")
@@ -75,11 +75,11 @@ class RatesClass(Resource):
     @app.doc(
         responses={200: "OK", 400: "Invalid Argument", 500: "Mapping Key Error"},
         params={
-            "date": "Enter date from in format yyyy-mm-dd",
-            "origin": "Enter origin where from to go",
-            "destination": "Enter destination where to go",
-            "price": "Enter price",
-            "currency": "Enter currency of price",
+            "date": "Enter date from in format yyyy-mm-dd; example: 2016-01-01",
+            "origin": "Enter origin code where from to go; example: CNGGZ",
+            "destination": "Enter destination code where to go; EETLL",
+            "price": "Enter price; example: 12000",
+            "currency": "Enter currency of price and this will be converted to USD; example: EUR",
         },
     )
     @app.expect(Parser.rates_post)
@@ -90,44 +90,43 @@ class RatesClass(Resource):
         origin = args.get("origin")
         destination = args.get("destination")
         price = args.get("price")
-        currency = str(args.get("currency")).upper()
+        currency = args.get("currency")
 
-        try:
-            response = requests.get(
-                "https://api.currencyfreaks.com/latest?apikey=9dd4dfce30c84f679528e8ac4529da8c"
-            )
-        except requests.exceptions.RequestException as e:
-            name_space.abort(
-                500,
-                e.__doc__,
-                status="Could not retrieve information",
-                statusCode="500",
-            )
-
-        if response.status_code == 200:
-            currencies = response.json()["rates"]
-            if currencies.get(currency):
-                currency_value = currencies.get(currency)
-            else:
-                name_space.abort(
-                    400,
-                    "Your currency doesnt exist",
-                    status="Could not retrieve information",
-                    statusCode="400",
-                )
-        else:
-            name_space.abort(
-                response.status_code,
-                "Currency freaks api doesnt work properly",
-                status="Could not retrieve information",
-                statusCode=response.status_code,
-            )
-
-        if currency == "USD" or "":
+        if currency is None or currency == "USD":
             new_price = price
         else:
-            new_price = int(float(currency_value) * float(price))
-        print(new_price)
+            currency = currency.upper()
+            try:
+                response = requests.get(
+                    "https://api.currencyfreaks.com/latest?apikey=9dd4dfce30c84f679528e8ac4529da8c"
+                )
+            except requests.exceptions.RequestException as e:
+                name_space.abort(
+                    500,
+                    e.__doc__,
+                    status="Could not retrieve information",
+                    statusCode="500",
+                )
+
+            if response.status_code == 200:
+                currencies = response.json()["rates"]
+                if currencies.get(currency):
+                    currency_value = currencies.get(currency)
+                else:
+                    name_space.abort(
+                        400,
+                        "Your currency doesnt exist",
+                        status="Could not retrieve information",
+                        statusCode="400",
+                    )
+            else:
+                name_space.abort(
+                    response.status_code,
+                    "Currency freaks api doesnt work properly",
+                    status="Could not retrieve information",
+                    statusCode=response.status_code,
+                )
+            new_price = int(float(price)/float(currency_value))
 
         try:
             sql_insert = (
@@ -163,10 +162,10 @@ class RatesClass(Resource):
         @app.doc(
             responses={200: "OK", 400: "Invalid Argument", 500: "Mapping Key Error"},
             params={
-                "date_from": "Enter date from in format yyyy-mm-dd",
-                "date_to": "Enter date in format yyyy-mm-dd",
-                "origin": "Enter origin where from to go",
-                "destination": "Enter destination where to go",
+                "date_from": "Enter date from in format yyyy-mm-dd; example: 2016-01-01",
+                "date_to": "Enter date in format yyyy-mm-dd; example: 2016-01-01",
+                "origin": "Enter origin code or slug from where to go; example: CNGGZ or china_south_main",
+                "destination": "Enter destination code or slug where to go; example: EETLL or baltic_main",
             },
         )
         @app.expect(Parser.rates_get)
