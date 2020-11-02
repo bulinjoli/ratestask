@@ -26,9 +26,12 @@ Install requirements.txt, I am using pip3 for python3
 pip3 install -r requirements.txt
 ```
 
-And run flask for swagger
+Create env variable for flask and run flask for swagger
 
 ``` shell
 cd ratestask
+export APP_NAME=app.py
 flask run
 ```
+
+Postgress connection string should be the same for your environment but in case its not you will have to change it
